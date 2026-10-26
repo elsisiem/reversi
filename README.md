@@ -28,7 +28,7 @@ Code: `ai.py` for the search and evaluation, `game_logic.py` for the rules.
 
 **Search**
 
-- Minimax with alpha-beta pruning (`minimax`). Root moves are ordered first: corners score highest, then moves that leave a disc on the top or bottom edge row, minus the opponent's mobility after the move (`score_move_for_ordering`).
+- Minimax with alpha-beta pruning (`minimax`). Root moves are searched in order of a cheap score: +100 for a corner, +30 if the player has a disc on the top or bottom row, minus the opponent's mobility after the move (`score_move_for_ordering`).
 - A transposition table keyed by a 64-bit Zobrist hash, updated incrementally in `make_move`. Each entry stores the depth it was searched to and whether its score is exact or a bound from a cutoff. An entry is reused only if it was searched at least as deep as the current node. The key also includes the side to move, because the hash does not.
 - Iterative deepening (`find_best_move`) searches depth 1, 2, 3 and so on up to a maximum. The deepest completed iteration decides the move. With a time limit, the unfinished iteration is discarded.
 - Minimax at a fixed depth is `find_best_move_original`.
@@ -44,14 +44,14 @@ Leaves are scored by `evaluate_board`: a weighted sum of terms, each computed as
 | Parity | Even or odd number of empty squares (+1 or -1) | 0.1 | 0.2 | 0.5 |
 | Stability | Discs for which `can_be_flipped` is false | 0.1 | 0.3 | 0.5 |
 | Corners | Corners owned | 3 | 4 | 5 |
-| Edges | Stable-looking discs on the edge rows and columns | 2 | 2 | 3 |
+| Edges | Edge discs for which `can_be_flipped` is false | 2 | 2 | 3 |
 | Disc difference | Discs on the board | 0.1 | 0.5 | 1 |
 
-Mobility and potential mobility dominate the opening, corners carry the most weight throughout, and parity, stability and disc count take over near the end.
+From early to end, the mobility weights fall from 0.5 to 0.1, while parity and stability rise from 0.1 to 0.5 and disc difference from 0.1 to 1.
 
 **Known limits**
 
-- It is pure Python. Fixed-depth Minimax is comfortable at depth 5 to 6; deeper iterative searches are bounded by the time limit instead.
+- It is pure Python. In middle-game positions on a development machine, fixed-depth Minimax took up to 0.6 s at depth 3, 2.3 s at depth 4 and 11 s at depth 5 per move, and up to 55 s at depth 6. Iterative deepening is bounded by its time limit instead.
 - A node where the side to move has no legal move is scored as a leaf. Passes are not searched.
 - Stability is a cheap approximation, not a full stable-disc analysis.
 - `opening_book`, `count_frontier_discs` and `calculate_corner_adjacency` are defined in `ai.py` but not used by the evaluation or the search.
@@ -71,7 +71,7 @@ Difficulty settings in the GUI:
 
 | Strategy | Easy | Medium | Hard |
 | --- | --- | --- | --- |
-| Minimax (depth) | 5 | 6 | 6 |
+| Minimax (depth) | 3 | 4 | 5 |
 | Iterative deepening (max depth, time limit) | 8, 2 s | 11, 5 s | 15, 10 s |
 
 ## AI vs AI simulations
