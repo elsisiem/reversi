@@ -70,8 +70,10 @@ def evaluate_board(board_tuple, player):
     disc_difference = np.sum(np.array(board) == player) - np.sum(np.array(board) == opponent)
     weights = adjust_weights_based_on_board(game_phase)
 
+    potential_mobility = calculate_potential_mobility(board, player) - calculate_potential_mobility(board, opponent)
+
     heuristic_value = (weights['mobility'] * mobility +
-                       weights['potential_mobility'] * weights.get('potential_mobility', 0) +
+                       weights['potential_mobility'] * potential_mobility +
                        weights['parity'] * calculate_parity(board) +
                        weights['stability'] * stability +
                        weights['corners'] * corners_captured +
@@ -107,9 +109,24 @@ def edge_stability(board, player):
                 stable_edges += 1
     return stable_edges
 
-def calculate_potential_mobility(board, opponent):
-    potential_moves = valid_moves(board, opponent)
-    return len(potential_moves)
+def calculate_potential_mobility(board, player):
+    """
+    Counts empty squares adjacent to at least one opponent disc. These are the
+    squares where `player` could gain a move later, so a higher count is better.
+    """
+    opponent = 3 - player
+    directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+    count = 0
+    for r in range(8):
+        for c in range(8):
+            if board[r][c] != 0:
+                continue
+            for dr, dc in directions:
+                rr, cc = r + dr, c + dc
+                if 0 <= rr < 8 and 0 <= cc < 8 and board[rr][cc] == opponent:
+                    count += 1
+                    break
+    return count
 
 def calculate_parity(board):
     empty_count = sum(1 for row in board for cell in row if cell == 0)
