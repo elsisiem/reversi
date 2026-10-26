@@ -75,7 +75,7 @@ def play_game(ai1, ai2, verbose=True):
 def main():
     #ai_minimax = lambda board, player: find_best_move(board, player, zobrist_keys, compute_hash(board, zobrist_keys), max_depth = 10)
     ai_minimax = lambda board, player: find_best_move_original(board, player, 6, zobrist_keys, compute_hash(board, zobrist_keys))
-    ai_greedy = lambda board, player: lambda board, player: find_best_move(board, player, zobrist_keys, compute_hash(board, zobrist_keys), max_depth = 10)
+    ai_greedy = lambda board, player: find_greedy_move(board, player)
 
     results = {'Minimax Wins': 0, 'Greedy Wins': 0, 'Draws': 0}
     num_games = 10

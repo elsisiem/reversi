@@ -59,7 +59,7 @@ def determine_winner(board):
 
     if black_discs > white_discs:
         return 1  # Black wins
-    elif white_discs < black_discs:
+    elif white_discs > black_discs:
         return 2  # White wins
     else:
         return 0  # Draw

@@ -8,6 +8,7 @@ def play_game(ai1, ai2, board, zobrist_keys, verbose=True):
     num_games = 10
 
     for i in range(num_games):
+        board = initialize_board()  # every game starts from the opening position
         current_player = 1
         current_hash = compute_hash(board, zobrist_keys)
         move_count = 0
