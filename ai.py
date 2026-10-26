@@ -42,6 +42,14 @@ TT_EXACT, TT_LOWER, TT_UPPER = 0, 1, 2
 transposition_table = {}
 
 
+class SearchTimeout(Exception):
+    """Raised inside minimax when the iterative deepening time budget runs out."""
+
+
+# Wall-clock deadline for the running search, or None for no limit.
+search_deadline = None
+
+
 def store_transposition(key, depth, score, flag):
     old = transposition_table.get(key)
     if old is None or old[0] <= depth:
@@ -202,6 +210,9 @@ def count_frontier_discs(board, player):
 
 
 def minimax(board, depth, alpha, beta, maximizing_player, player, zobrist_keys, current_hash):
+    if search_deadline is not None and time() > search_deadline:
+        raise SearchTimeout()
+
     if current_hash is None:
         current_hash = compute_hash(board, zobrist_keys)
 
@@ -278,35 +289,47 @@ def find_best_move_original(board, player, depth, zobrist_keys, current_hash):
 
     return best_moves[0] if best_moves else None
 
-def find_best_move(board, player, zobrist_keys, current_hash, max_depth=5):
+def find_best_move(board, player, zobrist_keys, current_hash, max_depth=5, time_limit=None):
+    """
+    Iterative deepening from depth 1 to max_depth. If time_limit (seconds) is
+    given, the search stops once it is exceeded and returns the best move of
+    the last completed depth. Depth 1 always completes.
+    """
+    global search_deadline
     best_move = None
+    started = time()
 
-    for depth in range(1, max_depth + 1):
-        current_alpha, current_beta = float('-inf'), float('inf')
-        local_best_score = float('-inf')
-        local_best_move = None
+    try:
+        for depth in range(1, max_depth + 1):
+            if depth > 1 and time_limit is not None:
+                search_deadline = started + time_limit
+            current_alpha, current_beta = float('-inf'), float('inf')
+            local_best_score = float('-inf')
+            local_best_move = None
 
-        moves = valid_moves(board, player)
-        moves = sorted(moves, key=lambda move: score_move_for_ordering(board, move, player, zobrist_keys, current_hash), reverse=True)
+            moves = valid_moves(board, player)
+            moves = sorted(moves, key=lambda move: score_move_for_ordering(board, move, player, zobrist_keys, current_hash), reverse=True)
 
-        for move in moves:
-            new_board, new_hash = make_move([row[:] for row in board], move[0], move[1], player, zobrist_keys, current_hash)
-            score = minimax(new_board, depth, current_alpha, current_beta, False, 3 - player, zobrist_keys, new_hash)
-            #print(f"Evaluating move {move} at depth {depth} with score {score}")
+            for move in moves:
+                new_board, new_hash = make_move([row[:] for row in board], move[0], move[1], player, zobrist_keys, current_hash)
+                score = minimax(new_board, depth, current_alpha, current_beta, False, 3 - player, zobrist_keys, new_hash)
 
-            if score > local_best_score:
-                local_best_score = score
-                local_best_move = move
-                if current_alpha < score:
-                    current_alpha = score
-                #print(f"New best move at depth {depth}: {local_best_move} with score {local_best_score}")
+                if score > local_best_score:
+                    local_best_score = score
+                    local_best_move = move
+                    if current_alpha < score:
+                        current_alpha = score
 
-        # Scores from different depths are not comparable, so the deepest
-        # completed iteration always wins.
-        if local_best_move is not None:
-            best_move = local_best_move
+            # Scores from different depths are not comparable, so the deepest
+            # completed iteration always wins.
+            if local_best_move is not None:
+                best_move = local_best_move
 
-        if local_best_score == float('inf'):
-            break
+            if local_best_score == float('inf'):
+                break
+    except SearchTimeout:
+        pass  # Discard the unfinished iteration and keep the previous result.
+    finally:
+        search_deadline = None
 
     return best_move if best_move else None

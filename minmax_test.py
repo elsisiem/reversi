@@ -1,8 +1,10 @@
 import random
+import time
 import unittest
 
 import ai
-from ai import init_zobrist, compute_hash, find_best_move_original, minimax, evaluate_board, convert_board
+from ai import (init_zobrist, compute_hash, find_best_move, find_best_move_original,
+                minimax, evaluate_board, convert_board)
 from game_logic import initialize_board, make_move, valid_moves
 
 
@@ -80,6 +82,16 @@ class TestSearchCorrectness(unittest.TestCase):
         stored_depth, stored_value, _ = ai.transposition_table[key]
         self.assertEqual(3, stored_depth)
         self.assertEqual(value, stored_value)
+
+
+class TestIterativeDeepening(unittest.TestCase):
+    def test_time_limit_stops_the_search_and_returns_a_legal_move(self):
+        board, player = midgame_board(seed=7, plies=14)
+        current_hash = compute_hash(board, ai.zobrist_keys)
+        started = time.time()
+        move = find_best_move(board, player, ai.zobrist_keys, current_hash, max_depth=30, time_limit=0.3)
+        self.assertLess(time.time() - started, 5)
+        self.assertIn(move, valid_moves(board, player))
 
 
 if __name__ == '__main__':

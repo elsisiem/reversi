@@ -12,14 +12,15 @@ from simulator_greedy import find_greedy_move
 class AiWorker(QThread):
     moveComputed = pyqtSignal(tuple)  # Emit a tuple for the move
 
-    def __init__(self, board, player, ai_function, zobrist_keys=None, current_hash=None, depth=None):
+    def __init__(self, board, player, ai_function, zobrist_keys=None, current_hash=None, depth=None, time_limit=None):
         super().__init__()
-        self.board = board.copy()  # Make a copy to work with locally
+        self.board = [row[:] for row in board]  # Deep copy so the search never shares rows with the live board
         self.player = player
         self.ai_function = ai_function
         self.zobrist_keys = zobrist_keys
         self.current_hash = current_hash
         self.depth = depth
+        self.time_limit = time_limit
 
     def run(self):
         move = self.ai_function(*self.get_args())
@@ -33,7 +34,7 @@ class AiWorker(QThread):
         if self.ai_function.__name__ == "find_greedy_move":
             return (self.board, self.player)
         elif self.ai_function.__name__ == "find_best_move":
-            return (self.board, self.player, self.zobrist_keys, self.current_hash, self.depth)
+            return (self.board, self.player, self.zobrist_keys, self.current_hash, self.depth, self.time_limit)
         else:  # assume find_best_move_original
             return (self.board, self.player, self.depth, self.zobrist_keys, self.current_hash)
 
@@ -48,6 +49,7 @@ class ReversiGUI(QMainWindow):
         self.current_hash = compute_hash(self.game_board, self.zobrist_keys)  # Compute initial hash
         self.show_legal_moves = True  
         self.ai_depth_original = 5  # Default depth for original Minimax
+        self.ai_time_limit = 2.0  # Seconds per move for iterative deepening (Easy)
         self.ai_depth_iterative = 5  # Default depth for iterative deepening        self.ai_move_function = find_best_move_original  # Assign the Minimax move function by default
         self.game_started = False  # Add this line to initialize game_started
         self.human_player = 1  # Default human as Black (1)
@@ -495,7 +497,8 @@ class ReversiGUI(QMainWindow):
                 'ai_function': ai_function,
                 'zobrist_keys': self.zobrist_keys,
                 'current_hash': self.current_hash,
-                'depth': self.ai_depth_iterative
+                'depth': self.ai_depth_iterative,
+                'time_limit': self.ai_time_limit
             }
         else:  # Default to original Minimax
             ai_function = find_best_move_original
