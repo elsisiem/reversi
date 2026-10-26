@@ -280,7 +280,6 @@ def find_best_move_original(board, player, depth, zobrist_keys, current_hash):
 
 def find_best_move(board, player, zobrist_keys, current_hash, max_depth=5):
     best_move = None
-    best_score = float('-inf')
 
     for depth in range(1, max_depth + 1):
         current_alpha, current_beta = float('-inf'), float('inf')
@@ -302,12 +301,12 @@ def find_best_move(board, player, zobrist_keys, current_hash, max_depth=5):
                     current_alpha = score
                 #print(f"New best move at depth {depth}: {local_best_move} with score {local_best_score}")
 
-        if local_best_score > best_score:
-            best_score = local_best_score
+        # Scores from different depths are not comparable, so the deepest
+        # completed iteration always wins.
+        if local_best_move is not None:
             best_move = local_best_move
-            #print(f"Updating global best move to: {best_move} with score {best_score} at depth {depth}")
 
-        if best_score == float('inf'):
+        if local_best_score == float('inf'):
             break
 
     return best_move if best_move else None
