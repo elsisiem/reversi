@@ -32,8 +32,20 @@ def compute_hash(board, zobrist_keys):
                 h ^= zobrist_keys[(row, col)][piece]
     return h
 
-# Transposition table
+# Transposition table. Key: (zobrist hash, side to move, whether that side is
+# maximizing). The side to move is not part of the hash, and leaf scores depend
+# on the maximizing side, so both go in the key. Value: (depth, score, flag).
+# An entry is reused only if it was searched at least as deep as the current
+# node. The flag says whether the score is exact or only a bound that came from
+# an alpha-beta cutoff.
+TT_EXACT, TT_LOWER, TT_UPPER = 0, 1, 2
 transposition_table = {}
+
+
+def store_transposition(key, depth, score, flag):
+    old = transposition_table.get(key)
+    if old is None or old[0] <= depth:
+        transposition_table[key] = (depth, score, flag)
 
 
 opening_book = {
@@ -193,18 +205,30 @@ def minimax(board, depth, alpha, beta, maximizing_player, player, zobrist_keys, 
     if current_hash is None:
         current_hash = compute_hash(board, zobrist_keys)
 
-    if current_hash in transposition_table:
-        return transposition_table[current_hash]
+    key = (current_hash, player, maximizing_player)
+    entry = transposition_table.get(key)
+    if entry is not None:
+        stored_depth, stored_score, flag = entry
+        if stored_depth >= depth:
+            if (flag == TT_EXACT
+                    or (flag == TT_LOWER and stored_score >= beta)
+                    or (flag == TT_UPPER and stored_score <= alpha)):
+                return stored_score
 
-    if depth == 0 or not valid_moves(board, player):
-        board_tuple = convert_board(board)
-        score = evaluate_board(board_tuple, player)
-        transposition_table[current_hash] = score
+    moves = valid_moves(board, player)
+    if depth == 0 or not moves:
+        # Leaf scores are always from the maximizing side's point of view.
+        scoring_player = player if maximizing_player else 3 - player
+        score = evaluate_board(convert_board(board), scoring_player)
+        # With no legal move the score does not depend on the remaining depth.
+        store_transposition(key, depth if moves else float('inf'), score, TT_EXACT)
         return score
 
+    alpha_start, beta_start = alpha, beta
     best_value = float('-inf') if maximizing_player else float('inf')
-    for move in valid_moves(board, player):
-        new_board, new_hash = make_move(board.copy(), move[0], move[1], player, zobrist_keys, current_hash)
+    for move in moves:
+        child = [row[:] for row in board]
+        new_board, new_hash = make_move(child, move[0], move[1], player, zobrist_keys, current_hash)
         value = minimax(new_board, depth - 1, alpha, beta, not maximizing_player, 3 - player, zobrist_keys, new_hash)
         if maximizing_player:
             best_value = max(best_value, value)
@@ -215,7 +239,13 @@ def minimax(board, depth, alpha, beta, maximizing_player, player, zobrist_keys, 
         if beta <= alpha:
             break
 
-    transposition_table[current_hash] = best_value
+    if best_value <= alpha_start:
+        flag = TT_UPPER
+    elif best_value >= beta_start:
+        flag = TT_LOWER
+    else:
+        flag = TT_EXACT
+    store_transposition(key, depth, best_value, flag)
     return best_value
 
 # Initialize Zobrist keys
