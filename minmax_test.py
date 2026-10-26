@@ -1,6 +1,5 @@
 import unittest
 from ai import init_zobrist, compute_hash, find_best_move_original
-from game_logic import compute_hash  # Assuming compute_hash is in game_logic.py
 
 class TestMinimaxStateManagement(unittest.TestCase):
     def test_board_integrity_after_minimax(self):
