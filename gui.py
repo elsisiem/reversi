@@ -48,7 +48,7 @@ class ReversiGUI(QMainWindow):
         self.current_player = 1  # Define the starting player
         self.current_hash = compute_hash(self.game_board, self.zobrist_keys)  # Compute initial hash
         self.show_legal_moves = True  
-        self.ai_depth_original = 5  # Default depth for original Minimax
+        self.ai_depth_original = 3  # Default depth for original Minimax (Easy)
         self.ai_time_limit = 2.0  # Seconds per move for iterative deepening (Easy)
         self.ai_depth_iterative = 5  # Default depth for iterative deepening        self.ai_move_function = find_best_move_original  # Assign the Minimax move function by default
         self.game_started = False  # Add this line to initialize game_started
@@ -443,7 +443,7 @@ class ReversiGUI(QMainWindow):
         self.update_board()
 
     def change_difficulty(self, index):
-        depth_limits_original = {0: 5, 1: 6, 2: 6}
+        depth_limits_original = {0: 3, 1: 4, 2: 5}
         depth_limits_iterative = {0: 8, 1: 11 , 2: 15}
         time_limits = {0: 2.0, 1: 5.0, 2: 10.0}  # Example time limits in seconds for each difficulty
 
